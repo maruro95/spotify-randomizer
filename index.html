@@ -1,0 +1,185 @@
+<html>
+	<head>
+		<title>SPOTIFY RANDOMIZER</title>
+		<style>
+			/* CSS Styling */
+			#frame {
+				margin: auto;
+				width: 50%;
+			}
+			#inputs{
+				margin: auto;
+				width: 50%;
+			}
+			.track {
+				bborder: 1px solid green;
+				display: inline-block;
+				padding: 1em;
+				max-width: 400px;
+				vertical-align: top;
+			}
+			.track img {
+				max-width: 400px;
+				margin: 0.3em;
+			}
+
+			h1 {
+				font-family: 'Montserrat', sans-serif;
+				font-size: 75px;
+				margin-top: 20px;
+				text-align: center;
+			}
+			h2 {
+				font-family: 'Montserrat', sans-serif;
+				font-size: 25px;
+				text-align: center;
+			}
+
+			#search_button {
+				background-color: #00ff31;
+				color:#ffffff;
+				padding:18px 5px;
+				font-family: 'Montserrat';
+				font-weight:bold;
+				font-size:40px;
+				border:0px solid;
+				display: block;
+				width:400px;
+				margin: 25px auto 10px auto;
+				cursor:pointer;
+			}
+
+			#search_button:hover {
+				background-color: #30d945;
+				}
+
+			#keyword_field {
+				font-family: 'Montserrat';
+				font-size:16px;
+				padding:5px 5px;
+				display:block;
+				width:50%;
+				margin: 0px auto;
+			}
+
+			#two {
+				position: relative;
+			}
+
+			#tracks {
+				margin: auto;
+				width: 50%;
+				margin-top: 25px;
+				text-align: center;
+				font-family: 'Montserrat', sans-serif;
+			}
+		</style>
+		<!--GOOGLE FONT API -->
+		<link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+		<!-- SCRIPTS -->
+		<!-- import handlebars -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js"></script>
+		<!-- import jquery -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/chance/1.0.4/chance.min.js"></script>
+	</head>
+	<body>
+		<!-- HTML -->
+		<h1>Spotify randomizer.</h1>
+		<div id="frame">
+			<!-- inputs for the search to send to server -->
+			<div id="inputs">
+				<h2>search: </h2>
+				<div id="two">
+					<input id="keyword_field" type="text"/>
+					<input id="search_button" type="button" value="RANDOMIZE !" onclick="search();">
+				</div>
+			</div>
+
+			<div id="tracks">
+				<script id="tracks-template" type="text/x-handlebars-template">
+					{{#each this}}
+					<div class="track">
+						<div class="Artist">Artist: {{artist}}</div>
+						<div class="Album">Album: {{album}}</div>
+						<div class="Image"><img src={{album_url}} /></div>
+					</div>
+					{{/each}}
+				</script>
+			</div>
+
+		</div>
+
+		<!-- SCRIPTS -->
+		<!-- import socket.io -->
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+
+		function choice(array) {
+			var index = chance.natural({min: 0, max: array.length -1});
+			return array[index];
+		}
+
+			// connect to localhost on its port (see server.js -- 8088)
+		  var socket = io().connect('http://localhost:8088');
+
+		  // when connecting
+		  socket.on('connect', function (data) {
+		  	console.log('connected');
+		  });
+
+		  // when receiving a custom message form the server ('search_SPOTIFY_results')
+		  socket.on('search_spotify_results', function(msg) {
+
+		  	console.log('search_spotify_results: ' + JSON.stringify(msg));
+
+		  	var filtered_results = [];
+
+		  	for(var i = 0; i < 1; i++) {
+
+		  		var item = choice(msg);
+
+		  		console.log(item);
+		  		console.log('------\n\n');
+
+		  		filtered_results.push({
+		  			artist: item.artists[0].name,
+		  			album: item.album.name,
+		  			album_url: item.album.images[0].url
+		  		});
+
+
+		  	}
+
+		  	compile_results_and_display(filtered_results);
+
+		  });
+
+		  // when search button is pressed
+		  function search() {
+
+		  	var input_keyword = document.getElementById('keyword_field').value;
+
+		  	socket.emit('search_spotify', {keyword: input_keyword});
+
+		  }
+
+		  function compile_results_and_display(results) {
+
+		  	var template_script = $("#tracks-template").html();
+
+			var template = Handlebars.compile(template_script);
+
+			$('.track').remove();
+
+			$('#tracks').append(template(results));
+
+		  }
+
+
+
+		</script>
+    </script>
+	</body>
+</html>
